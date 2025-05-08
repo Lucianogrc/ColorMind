@@ -1,30 +1,32 @@
-import cv2
-import numpy as np
-from sklearn.cluster import KMeans
-from utils.color_analysis import generate_palette, rgb_to_hex
+from utils.color_analysis import rgb_to_hex
 
-
-def extract_dominant_color(image_path, n_clusters=5):
-    """
-    Loads an image and returns the most dominant RGB color.
-    """
-    img = cv2.imread(image_path)
-    img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-    img = cv2.resize(img, (200, 200))
-    pixels = img.reshape((-1, 3))
-
-    kmeans = KMeans(n_clusters=n_clusters, random_state=42)
-    kmeans.fit(pixels)
-
-    counts = np.bincount(kmeans.labels_)
-    dominant_color = kmeans.cluster_centers_[np.argmax(counts)]
-    return tuple(map(int, dominant_color))
-
-def build_palette(image_path, concept="modern"):
-    """
-    Returns a list of HEX colors based on the dominant color and design concept.
-    """
+def build_palette(image_path, concept):
+    from utils.color_analysis import extract_dominant_color
     base_rgb = extract_dominant_color(image_path)
-    palette_rgb = generate_palette(base_rgb, concept)
-    palette_hex = [rgb_to_hex(color) for color in palette_rgb]
-    return palette_hex
+
+    return generate_palette(base_rgb, concept)
+
+def generate_palette(base_rgb, concept):
+    import colorsys
+
+    r, g, b = [x / 255.0 for x in base_rgb]
+    h, s, v = colorsys.rgb_to_hsv(r, g, b)
+
+    palette = []
+
+    if concept == "modern":
+        shifts = [0, 0.08, 0.16, 0.5]
+    elif concept == "elegant":
+        shifts = [0, 0.03, -0.03, 0.5]
+    elif concept == "youthful":
+        shifts = [0, 0.2, -0.2, 0.6]
+    else:
+        shifts = [0, 0.1, 0.2, 0.5]
+
+    for shift in shifts:
+        h_mod = (h + shift) % 1.0
+        r_new, g_new, b_new = colorsys.hsv_to_rgb(h_mod, s, v)
+        rgb = (int(r_new * 255), int(g_new * 255), int(b_new * 255))
+        palette.append(rgb)
+
+    return palette
